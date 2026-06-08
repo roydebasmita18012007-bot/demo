@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AM Modulation Learning Simulator | Interactive Dashboard</title>
+  <meta name="description" content="An interactive, high-fidelity AM Modulation Learning Simulator. Adjust amplitudes, frequencies, and modulation index in real time. View waveforms, frequency spectrum, phasor diagrams, and explore dynamic communication-system formulas.">
+  <meta name="keywords" content="Amplitude Modulation, AM Simulator, AM Waveform, Signal Processing, Communications Engineering, DSB-TC, DSB-SC, SSB, Frequency Spectrum, Phasor Diagram">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- KaTeX CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+
+  <!-- App Styles -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Animated Background -->
+  <div class="bg-layer" aria-hidden="true">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+    <div class="scanline"></div>
+  </div>
+
+  <!-- App Wrapper -->
+  <div class="app-root">
+
+    <!-- ═══════════════════ HEADER ═══════════════════ -->
+    <header class="top-bar" role="banner">
+      <div class="top-bar__brand">
+        <div class="brand-icon" aria-hidden="true">
+          <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 18 Q6 8 12 18 Q15 24 18 18 Q21 12 24 18 Q27 24 30 18 Q33 10 33 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <circle cx="18" cy="18" r="15" stroke="currentColor" stroke-width="1.5" opacity="0.3"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>AM Modulation Simulator</h1>
+          <span>Interactive Learning Dashboard</span>
+        </div>
+      </div>
+
+      <div class="top-bar__status">
+        <div class="status-badge" id="mod-status-badge">
+          <span class="status-dot"></span>
+          <span id="mod-status-text">Under-Modulated</span>
+        </div>
+        <div class="snr-display" id="snr-display" title="Signal-to-Noise Ratio">
+          <span class="snr-label">SNR</span>
+          <span class="snr-value" id="snr-value">∞ dB</span>
+        </div>
+      </div>
+
+      <div class="top-bar__actions">
+        <button class="action-btn action-btn--primary" id="btn-play-pause" title="Toggle animation (Space)">
+          <svg id="icon-pause" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+          <svg id="icon-play" class="hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          <span id="btn-play-label">Pause</span>
+        </button>
+        <button class="action-btn action-btn--secondary" id="btn-reset" title="Reset all parameters (R)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+          </svg>
+          <span>Reset</span>
+        </button>
+        <button class="action-btn action-btn--audio" id="btn-audio" title="Toggle tone audio">
+          <svg id="icon-sound-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+          </svg>
+          <svg id="icon-sound-on" class="hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- ═══════════════════ MAIN DASHBOARD ═══════════════════ -->
+    <main class="dashboard" role="main">
+
+      <!-- ── COLUMN 1: CONTROLS ── -->
+      <aside class="panel panel--controls" aria-label="Signal Parameters">
+        <div class="panel__header">
+          <svg class="panel__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+          Signal Parameters
+        </div>
+        <div class="panel__body">
+
+          <!-- AM Type -->
+          <div class="ctrl-group">
+            <label class="ctrl-label" for="sel-am-type">
+              Modulation Type
+              <span class="info-tip" data-tip="DSB-TC includes carrier; DSB-SC suppresses it to save power; SSB transmits only one sideband, halving bandwidth." tabindex="0">?</span>
+            </label>
+            <div class="select-wrap">
+              <select id="sel-am-type">
+                <option value="dsb-tc" selected>Standard AM (DSB-TC)</option>
+                <option value="dsb-sc">Suppressed Carrier (DSB-SC)</option>
+                <option value="ssb-usb">Single Sideband — USB</option>
+                <option value="ssb-lsb">Single Sideband — LSB</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="ctrl-divider"></div>
+
+          <!-- Message Signal -->
+          <div class="ctrl-section-label color-cyan">
+            <span class="dot dot-cyan"></span> Message Signal  <code>m(t)</code>
+          </div>
+
+          <div class="ctrl-group">
+            <div class="ctrl-row">
+              <label class="ctrl-label" for="sl-am">Amplitude <em>A<sub>m</sub></em></label>
+              <span class="ctrl-val cyan" id="val-am">1.0 V</span>
+            </div>
+            <input type="range" id="sl-am" class="slider cyan-thumb" min="0" max="4" step="0.1" value="1.0">
+          </div>
+
+          <div class="ctrl-group">
+            <div class="ctrl-row">
+              <label class="ctrl-label" for="sl-fm">Frequency <em>f<sub>m</sub></em></label>
+              <span class="ctrl-val cyan" id="val-fm">100 Hz</span>
+            </div>
+            <input type="range" id="sl-fm" class="slider cyan-thumb" min="10" max="300" step="5" value="100">
+          </div>
+
+          <div class="ctrl-divider"></div>
+
+          <!-- Carrier Signal -->
+          <div class="ctrl-section-label color-amber">
+            <span class="dot dot-amber"></span> Carrier Signal  <code>c(t)</code>
+          </div>
+
+          <div class="ctrl-group">
+            <div class="ctrl-row">
+              <label class="ctrl-label" for="sl-ac">Amplitude <em>A<sub>c</sub></em></label>
+              <span class="ctrl-val amber" id="val-ac">2.0 V</span>
+            </div>
+            <input type="range" id="sl-ac" class="slider amber-thumb" min="0.5" max="4" step="0.1" value="2.0">
+          </div>
+
+          <div class="ctrl-group">
+            <div class="ctrl-row">
+              <label class="ctrl-label" for="sl-fc">Frequency <em>f<sub>c</sub></em></label>
+              <span class="ctrl-val amber" id="val-fc">1000 Hz</span>
+            </div>
+            <input type="range" id="sl-fc" class="slider amber-thumb" min="200" max="3000" step="50" value="1000">
+          </div>
+
+          <div class="ctrl-divider"></div>
+
+          <!-- Channel & View -->
+          <div class="ctrl-section-label color-violet">
+            <span class="dot dot-violet"></span> Channel & View
+          </div>
+
+          <div class="ctrl-group">
+            <div class="ctrl-row">
+              <label class="ctrl-label" for="sl-noise">AWGN Noise</label>
+              <span class="ctrl-val violet" id="val-noise">0.00 V</span>
+            </div>
+            <input type="range" id="sl-noise" class="slider violet-thumb" min="0" max="1.5" step="0.05" value="0">
+          </div>
+
+          <div class="grid-2">
+            <div class="ctrl-group">
+              <label class="ctrl-label" for="sl-zx">Time Zoom</label>
+              <input type="range" id="sl-zx" class="slider violet-thumb" min="0.5" max="4" step="0.1" value="1">
+            </div>
+            <div class="ctrl-group">
+              <label class="ctrl-label" for="sl-zy">Amp Zoom</label>
+              <input type="range" id="sl-zy" class="slider violet-thumb" min="0.5" max="2" step="0.1" value="1">
+            </div>
+          </div>
+
+          <div class="ctrl-divider"></div>
+
+          <!-- Demodulator -->
+          <div class="ctrl-section-label color-orange">
+            <span class="dot dot-orange"></span> Demodulator
+          </div>
+
+          <div class="ctrl-group">
+            <label class="ctrl-label" for="sel-demod">
+              Mode
+              <span class="info-tip" data-tip="Ideal Envelope: pure |s(t)|. Practical Diode+RC: simulates charging/discharging behavior of a real envelope detector." tabindex="0">?</span>
+            </label>
+            <div class="select-wrap">
+              <select id="sel-demod">
+                <option value="practical" selected>Practical Diode + RC</option>
+                <option value="ideal">Ideal Envelope |s(t)|</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="ctrl-group">
+            <div class="ctrl-row">
+              <label class="ctrl-label" for="sl-rc">RC Time Const. <em>τ</em></label>
+              <span class="ctrl-val orange" id="val-rc">1.5 ms</span>
+            </div>
+            <input type="range" id="sl-rc" class="slider orange-thumb" min="0.1" max="10" step="0.1" value="1.5">
+          </div>
+
+          <!-- Volume -->
+          <div class="ctrl-group" id="vol-group" style="display:none;">
+            <div class="ctrl-row">
+              <label class="ctrl-label" for="sl-vol">Tone Volume</label>
+              <span class="ctrl-val violet" id="val-vol">30%</span>
+            </div>
+            <input type="range" id="sl-vol" class="slider violet-thumb" min="0" max="100" step="5" value="30">
+          </div>
+
+          <!-- Keyboard shortcut hint -->
+          <div class="kb-hints">
+            <kbd>Space</kbd> Play/Pause &nbsp;·&nbsp; <kbd>R</kbd> Reset
+          </div>
+        </div>
+      </aside>
+
+      <!-- ── COLUMN 2: WAVEFORMS ── -->
+      <section class="panel panel--waves" aria-label="Waveform Visualizations">
+        <!-- Row 1 -->
+        <div class="wave-row">
+          <!-- Message Signal -->
+          <div class="wave-card" id="wc-message">
+            <div class="wave-card__header">
+              <div class="wave-card__title">
+                <span class="wave-bar" style="--wc: var(--cyan)"></span>
+                Message <code>m(t)</code>
+              </div>
+              <div class="wave-card__meta" id="meta-msg">100 Hz · 1.0 V</div>
+            </div>
+            <div class="canvas-shell">
+              <canvas id="cv-msg"></canvas>
+              <div class="cv-tooltip" id="tt-msg"></div>
+            </div>
+          </div>
+
+          <!-- Carrier Signal -->
+          <div class="wave-card" id="wc-carrier">
+            <div class="wave-card__header">
+              <div class="wave-card__title">
+                <span class="wave-bar" style="--wc: var(--amber)"></span>
+                Carrier <code>c(t)</code>
+              </div>
+              <div class="wave-card__meta" id="meta-carrier">1000 Hz · 2.0 V</div>
+            </div>
+            <div class="canvas-shell">
+              <canvas id="cv-carrier"></canvas>
+              <div class="cv-tooltip" id="tt-carrier"></div>
+            </div>
+          </div>
+
+          <!-- Modulated Signal -->
+          <div class="wave-card wave-card--tall" id="wc-mod">
+            <div class="wave-card__header">
+              <div class="wave-card__title">
+                <span class="wave-bar" style="--wc: var(--magenta)"></span>
+                AM Signal <code>s(t)</code>
+              </div>
+              <div class="wave-card__badges">
+                <span class="badge-pill" id="pill-m">m = 0.50</span>
+                <div class="wave-card__meta" id="meta-mod">DSB-TC</div>
+              </div>
+            </div>
+            <div class="canvas-shell">
+              <canvas id="cv-mod"></canvas>
+              <div class="cv-tooltip" id="tt-mod"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 2 -->
+        <div class="wave-row">
+          <!-- Demodulated -->
+          <div class="wave-card" id="wc-demod">
+            <div class="wave-card__header">
+              <div class="wave-card__title">
+                <span class="wave-bar" style="--wc: var(--orange)"></span>
+                Demodulated <code>v<sub>d</sub>(t)</code>
+              </div>
+              <div class="wave-card__meta" id="meta-demod">Practical RC</div>
+            </div>
+            <div class="canvas-shell">
+              <canvas id="cv-demod"></canvas>
+              <div class="cv-tooltip" id="tt-demod"></div>
+            </div>
+          </div>
+
+          <!-- Frequency Spectrum -->
+          <div class="wave-card" id="wc-spec">
+            <div class="wave-card__header">
+              <div class="wave-card__title">
+                <span class="wave-bar" style="--wc: var(--green)"></span>
+                Spectrum <code>S(f)</code>
+              </div>
+              <div class="wave-card__meta" id="meta-spec">BW: 200 Hz</div>
+            </div>
+            <div class="canvas-shell">
+              <canvas id="cv-spec"></canvas>
+              <div class="cv-tooltip" id="tt-spec"></div>
+            </div>
+          </div>
+
+          <!-- Phasor Diagram -->
+          <div class="wave-card wave-card--tall" id="wc-phasor">
+            <div class="wave-card__header">
+              <div class="wave-card__title">
+                <span class="wave-bar" style="--wc: var(--violet)"></span>
+                Phasor Diagram
+              </div>
+              <div class="wave-card__meta" id="meta-phasor">Rotating frame</div>
+            </div>
+            <div class="canvas-shell">
+              <canvas id="cv-phasor"></canvas>
+              <div class="cv-tooltip" id="tt-phasor"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── COLUMN 3: THEORY & CALCULATIONS ── -->
+      <aside class="panel panel--theory" aria-label="Theory and Calculations">
+
+        <!-- Dynamic Equations -->
+        <div class="theory-card">
+          <div class="theory-card__header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h10M4 18h6"/></svg>
+            Live Equations
+          </div>
+          <div class="eq-box">
+            <div class="eq-label">General Form</div>
+            <div class="eq-render" id="eq-general"></div>
+          </div>
+          <div class="eq-box eq-box--highlight">
+            <div class="eq-label">With Parameters</div>
+            <div class="eq-render" id="eq-params"></div>
+          </div>
+          <div class="eq-box">
+            <div class="eq-label">Bandwidth Formula</div>
+            <div class="eq-render" id="eq-bw"></div>
+          </div>
+          <div class="eq-box">
+            <div class="eq-label">Power &amp; Efficiency</div>
+            <div class="eq-render" id="eq-power"></div>
+          </div>
+        </div>
+
+        <!-- System Calculations -->
+        <div class="theory-card">
+          <div class="theory-card__header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h.01M15 9h.01M9 15h6"/></svg>
+            System Calculations
+          </div>
+          <div class="metrics-grid">
+            <div class="metric">
+              <span class="metric__label">Mod. Index <em>m = A<sub>m</sub>/A<sub>c</sub></em></span>
+              <span class="metric__value" id="calc-m" style="color:var(--magenta)">0.50</span>
+              <span class="metric__desc" id="calc-m-desc">Under-modulated (< 1)</span>
+            </div>
+            <div class="metric">
+              <span class="metric__label">Sideband Freqs <em>f<sub>LSB</sub> / f<sub>USB</sub></em></span>
+              <span class="metric__value" id="calc-sb" style="color:var(--amber)">900 / 1100 Hz</span>
+              <span class="metric__desc">fc ± fm</span>
+            </div>
+            <div class="metric">
+              <span class="metric__label">Bandwidth <em>BW</em></span>
+              <span class="metric__value" id="calc-bw" style="color:var(--green)">200 Hz</span>
+              <span class="metric__desc" id="calc-bw-desc">Double sideband: 2 × f<sub>m</sub></span>
+            </div>
+            <div class="metric">
+              <span class="metric__label">Carrier Power <em>P<sub>c</sub></em></span>
+              <span class="metric__value" id="calc-pc" style="color:var(--cyan)">2.00 W</span>
+              <span class="metric__desc">A<sub>c</sub>² / 2 at 1Ω load</span>
+            </div>
+            <div class="metric">
+              <span class="metric__label">Sideband Power <em>P<sub>sb</sub></em></span>
+              <span class="metric__value" id="calc-psb" style="color:var(--violet)">0.25 W</span>
+              <span class="metric__desc" id="calc-psb-desc">Total power in sidebands</span>
+            </div>
+            <div class="metric">
+              <span class="metric__label">Efficiency <em>η = P<sub>sb</sub>/P<sub>total</sub></em></span>
+              <span class="metric__value" id="calc-eta" style="color:#fff">11.1%</span>
+              <span class="metric__desc" id="calc-eta-desc">Message power fraction</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Theory Accordion -->
+        <div class="theory-card theory-card--flex">
+          <div class="theory-card__header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg>
+            AM Theory Guide
+          </div>
+          <div class="accordion">
+
+            <details class="acc-item" open>
+              <summary class="acc-summary">What is Amplitude Modulation?</summary>
+              <div class="acc-body">
+                <p>In <strong>Amplitude Modulation (AM)</strong>, the <em>amplitude</em> of a high-frequency carrier wave is varied proportionally to the instantaneous value of a lower-frequency message signal. The frequency and phase of the carrier remain constant.</p>
+                <p>The carrier acts as a "vessel" — it carries no information itself, but its envelope encodes the message.</p>
+                <div class="acc-formula">s(t) = [A<sub>c</sub> + m(t)] cos(2πf<sub>c</sub>t)</div>
+              </div>
+            </details>
+
+            <details class="acc-item">
+              <summary class="acc-summary">Modulation Index & Distortion</summary>
+              <div class="acc-body">
+                <p>The <strong>modulation index</strong> m = A<sub>m</sub>/A<sub>c</sub> controls depth of modulation:</p>
+                <ul>
+                  <li><strong style="color:var(--green)">m &lt; 1</strong> — Under-modulated: envelope detector works perfectly, no phase reversal.</li>
+                  <li><strong style="color:var(--amber)">m = 1</strong> — Critical: maximum modulation depth without distortion.</li>
+                  <li><strong style="color:var(--orange)">m &gt; 1</strong> — Over-modulated: <em>envelope clipping</em> occurs, causing severe harmonic distortion and adjacent-channel interference.</li>
+                </ul>
+              </div>
+            </details>
+
+            <details class="acc-item">
+              <summary class="acc-summary">Power & Spectral Efficiency</summary>
+              <div class="acc-body">
+                <p>In standard AM (DSB-TC), most transmitted power is wasted in the carrier:</p>
+                <div class="acc-formula">η = m² / (2 + m²) × 100%</div>
+                <p>At m=1, only <strong>33.3%</strong> of total power carries message information. Techniques:</p>
+                <ul>
+                  <li><strong>DSB-SC</strong>: Carrier suppressed → 100% efficiency, same BW as AM.</li>
+                  <li><strong>SSB</strong>: One sideband removed → 100% efficient AND half bandwidth.</li>
+                </ul>
+              </div>
+            </details>
+
+            <details class="acc-item">
+              <summary class="acc-summary">Sideband Frequencies & Bandwidth</summary>
+              <div class="acc-body">
+                <p>AM modulation creates two spectral replicas around the carrier:</p>
+                <ul>
+                  <li><strong>LSB</strong> (Lower Sideband): f<sub>c</sub> − f<sub>m</sub></li>
+                  <li><strong>USB</strong> (Upper Sideband): f<sub>c</sub> + f<sub>m</sub></li>
+                </ul>
+                <p>Standard AM/DSB-SC: <strong>BW = 2f<sub>m</sub></strong><br>
+                   SSB: <strong>BW = f<sub>m</sub></strong></p>
+                <p>This is why commercial AM radio stations are spaced 10 kHz apart — each can carry audio up to 5 kHz.</p>
+              </div>
+            </details>
+
+            <details class="acc-item">
+              <summary class="acc-summary">Envelope Detection (RC Demodulator)</summary>
+              <div class="acc-body">
+                <p>A practical envelope detector uses a <strong>diode + RC filter</strong>. The diode rectifies the AM signal (passes positive half-cycles only). The capacitor charges rapidly to peaks and discharges slowly through R.</p>
+                <p>RC time constant must satisfy: <strong>1/f<sub>c</sub> ≪ RC ≪ 1/f<sub>m</sub></strong></p>
+                <ul>
+                  <li>Too small RC → ripple at carrier frequency remains.</li>
+                  <li>Too large RC → capacitor can't follow envelope → distortion.</li>
+                </ul>
+                <p>Adjust the RC slider above to observe both failure modes!</p>
+              </div>
+            </details>
+
+            <details class="acc-item">
+              <summary class="acc-summary">Phasor Diagram Interpretation</summary>
+              <div class="acc-body">
+                <p>In the rotating phasor frame (synchronized to f<sub>c</sub>), the AM signal decomposes into:</p>
+                <ul>
+                  <li><span style="color:var(--amber)">■ Yellow</span>: Carrier phasor A<sub>c</sub> (stationary)</li>
+                  <li><span style="color:var(--green)">■ Green</span>: USB phasor rotating at +f<sub>m</sub></li>
+                  <li><span style="color:var(--cyan)">■ Cyan</span>: LSB phasor rotating at −f<sub>m</sub></li>
+                  <li><span style="color:var(--magenta)">■ Magenta</span>: Resultant — the instantaneous envelope</li>
+                </ul>
+                <p>For SSB, only one sideband rotates, creating circular motion rather than linear oscillation.</p>
+              </div>
+            </details>
+
+          </div>
+        </div>
+
+      </aside>
+
+    </main>
+
+    <!-- ═══════════════════ FOOTER ═══════════════════ -->
+    <footer class="bottom-bar" role="contentinfo">
+      <p>© 2026 AM Modulation Learning Simulator · Built for signal processing education</p>
+      <div class="bottom-bar__status">
+        <span class="live-dot"></span>
+        <span id="fps-counter">60 fps</span>
+        &nbsp;·&nbsp; Real-time canvas rendering active
+      </div>
+    </footer>
+
+  </div><!-- end .app-root -->
+
+  <!-- KaTeX -->
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+  <!-- App Logic -->
+  <script src="simulator.js"></script>
+</body>
+</html>
